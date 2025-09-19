@@ -336,13 +336,13 @@ func (r *Reloader) Watch(ctx context.Context) error {
 
 	for {
 		select {
-		case <-applyCtx.Done():
+		case <-applyCtx.Done(): //  watch interval timeout expires
 			if ctx.Err() != nil {
 				applyCancel()
 				wg.Wait()
 				return nil
 			}
-		case <-r.watcher.notify:
+		case <-r.watcher.notify: // when filesystem changes are detected
 		}
 
 		// Reset the watch timeout.

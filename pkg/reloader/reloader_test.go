@@ -311,7 +311,7 @@ faulty_config:
 }
 
 func TestReloader_ConfigDirApply(t *testing.T) {
-	t.Skip("Flaky")
+	// t.Skip("Flaky")
 
 	t.Parallel()
 
@@ -614,7 +614,7 @@ func TestReloader_ConfigDirApply(t *testing.T) {
 }
 
 func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
-	t.Skip("Flaky")
+	// t.Skip("Flaky")
 
 	t.Parallel()
 
@@ -690,7 +690,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	testutil.Ok(t, os.Symlink(path.Join(dir2, "rule3-source.yaml"), path.Join(dir2, "rule3-001.yaml")))
 	testutil.Ok(t, os.WriteFile(path.Join(dir2, "rule-dir", "rule4.yaml"), []byte("rule4"), os.ModePerm))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // terminate the test after 10 seconds
 	g := sync.WaitGroup{}
 	g.Go(func() {
 		defer cancel()
@@ -703,10 +703,13 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(500 * time.Millisecond):
+			case <-time.After(500 * time.Millisecond): // do the test after 500 * time.Millisecond
 			}
 
 			rel := reloads.Load().(int)
+			// check if it is in the first or the second iteration
+			// for first iteration, init will be false -> keep execution
+			// for second iteration, init will be true -> continue to next iteration
 			if init && rel <= reloadsSeen {
 				continue
 			}
@@ -800,6 +803,15 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	testutil.Equals(t, "rule2", string(data))
 	data, err = os.ReadFile(filepath.Join(outDir, "rule3.yaml"))
 	testutil.Ok(t, err)
+	// error!
+	// testutil.go:91: reloader_test.go:803: ""
+
+	//     	exp: "rule3-changed"
+
+	//     	got: "rule3"
+	// It seems that the reloader did not execute the step 1
+	// Question: Did the svr increase the reload count?
+	// Question: Does the step 1 still under execution before this assertion happens?
 	testutil.Equals(t, "rule3-changed", string(data))
 
 	outEntries2, err := os.ReadDir(outDir2)
