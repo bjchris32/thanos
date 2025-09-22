@@ -823,7 +823,9 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	//     	got: "rule3"
 	// It seems that the reloader did not execute the step 1
 	// Question: Did the svr increase the reload count?
+	// 		-> Yes, the assertion passed: testutil.Equals(t, 2, reloads.Load().(int))
 	// Question: Does the step 1 still under execution before this assertion happens? How about step 0? Is step 0 still executing?
+	// Question: How to confirm the current outDir and outDir2?
 	testutil.Equals(t, "rule3-changed", string(data))
 
 	outEntries2, err := os.ReadDir(outDir2)
