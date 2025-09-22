@@ -682,8 +682,6 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	// │  └─ rule4.yaml
 	// ├─ rule3-001.yaml -> rule3-source.yaml
 	// └─ rule3-source.yaml
-	//
-	// The reloader watches 2 directories: dir and dir/rule-dir.
 	testutil.Ok(t, os.WriteFile(path.Join(dir, "rule1.yaml"), []byte("rule"), os.ModePerm))
 	testutil.Ok(t, os.WriteFile(path.Join(dir, "rule2.yaml"), []byte("rule2"), os.ModePerm))
 	testutil.Ok(t, os.WriteFile(path.Join(dir2, "rule3-source.yaml"), []byte("rule3"), os.ModePerm))
@@ -703,7 +701,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(500 * time.Millisecond): // do the test after 500 * time.Millisecond
+			case <-time.After(500 * time.Millisecond): // do the next test step after 500 * time.Millisecond
 			}
 
 			rel := reloads.Load().(int)
@@ -720,7 +718,20 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 			switch rel {
 			case 0:
 				// Create rule3.yaml (symlink to rule3-001.yaml).
-				//
+				testutil.Ok(t, os.Symlink(path.Join(dir2, "rule3-001.yaml"), path.Join(dir2, "rule3.yaml")))
+				// after creating the link in dir2:
+				// dir
+				// ├─ rule-dir -> dir2/rule-dir
+				// ├─ rule1.yaml
+				// ├─ rule2.yaml
+				// dir2
+				// ├─ rule-dir
+				// │  └─ rule4.yaml
+				// ├─ rule3-001.yaml -> rule3-source.yaml
+				// └─ rule3-source.yaml
+				// └─ rule3.yaml -> dir2/rule3-001.yaml (*)
+				testutil.Ok(t, os.Rename(path.Join(dir2, "rule3.yaml"), path.Join(dir, "rule3.yaml")))
+				// after moving the link from dir2 to dir:
 				// dir
 				// ├─ rule-dir -> dir2/rule-dir
 				// ├─ rule1.yaml
@@ -731,8 +742,9 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 				// │  └─ rule4.yaml
 				// ├─ rule3-001.yaml -> rule3-source.yaml
 				// └─ rule3-source.yaml
-				testutil.Ok(t, os.Symlink(path.Join(dir2, "rule3-001.yaml"), path.Join(dir2, "rule3.yaml")))
-				testutil.Ok(t, os.Rename(path.Join(dir2, "rule3.yaml"), path.Join(dir, "rule3.yaml")))
+
+				// Question: Do out1 and out2 synchronize the files in the direcotry `rule-dir`? Why did not we list `rule-dir` in the comment?
+				// 			-> According to `CfgDirOption` doc in reloader.go, sub-directories are ignored.
 				// out1
 				// ├─ rule1.yaml
 				// ├─ rule2.yaml
@@ -773,7 +785,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 			}
 		}
 	})
-	err = reloader.Watch(ctx)
+	err = reloader.Watch(ctx) // WatchInterval: 1 * time.Second, // use a small watch interval.
 	cancel()
 	g.Wait()
 
@@ -811,7 +823,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	//     	got: "rule3"
 	// It seems that the reloader did not execute the step 1
 	// Question: Did the svr increase the reload count?
-	// Question: Does the step 1 still under execution before this assertion happens?
+	// Question: Does the step 1 still under execution before this assertion happens? How about step 0? Is step 0 still executing?
 	testutil.Equals(t, "rule3-changed", string(data))
 
 	outEntries2, err := os.ReadDir(outDir2)
