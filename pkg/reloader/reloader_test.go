@@ -708,13 +708,14 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 			// check if it is in the first or the second iteration
 			// for first iteration, init will be false -> keep execution
 			// for second iteration, init will be true -> continue to next iteration
+			t.Log("init is ", init, "checking rel", rel, "and reloadsSeen", reloadsSeen)
 			if init && rel <= reloadsSeen {
 				continue
 			}
 			init = true
 			reloadsSeen = rel
 
-			t.Log("Performing step number", rel)
+			// t.Log("Performing step number", rel)
 			switch rel {
 			case 0:
 				// Create rule3.yaml (symlink to rule3-001.yaml).
@@ -815,17 +816,47 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	testutil.Equals(t, "rule2", string(data))
 	data, err = os.ReadFile(filepath.Join(outDir, "rule3.yaml"))
 	testutil.Ok(t, err)
-	// error!
-	// testutil.go:91: reloader_test.go:803: ""
+
+	// correct output:
+	// === RUN   TestReloader_ConfigDirApplyBasedOnWatchInterval
+	// === PAUSE TestReloader_ConfigDirApplyBasedOnWatchInterval
+	// === CONT  TestReloader_ConfigDirApplyBasedOnWatchInterval
+	// 	reloader_test.go:717: Performing step number 0
+	// 	reloader_test.go:717: Performing step number 1
+	// 	reloader_test.go:717: Performing step number 2
+	// --- PASS: TestReloader_ConfigDirApplyBasedOnWatchInterval (1.54s)
+
+	// error output:
+	// === CONT  TestReloader_ConfigDirApplyBasedOnWatchInterval
+	// reloader_test.go:717: Performing step number 0
+	// reloader_test.go:717: Performing step number 2
+	// testutil.go:91: reloader_test.go:829: ""
+	//     	exp: "rule3-changed"
+	//     	got: "rule3"
+
+	// Another error investigation:
+	// reloader_test.go:711: init is  false checking rel 0 and reloadsSeen 0
+	// reloader_test.go:711: init is  true checking rel 2 and reloadsSeen 0
+	// testutil.go:91: reloader_test.go:844: ""
 
 	//     	exp: "rule3-changed"
 
 	//     	got: "rule3"
+
 	// It seems that the reloader did not execute the step 1
 	// Question: Did the svr increase the reload count?
 	// 		-> Yes, the assertion passed: testutil.Equals(t, 2, reloads.Load().(int))
 	// Question: Does the step 1 still under execution before this assertion happens? How about step 0? Is step 0 still executing?
-	// Question: How to confirm the current outDir and outDir2?
+	// 		-> no, the step 1 was skipped. The rel jumps from 0 to 2.
+	// 		In step 0, the reloader sometimes send two requests to the mock server and increment the rel counter by 2.
+	// 		Questions: How to combine the two actions in step 0, so that reloader only notify the mock server for once?
+	// 		Questions: How to not rely on `rel` to execute the test steps? Can we use other variable to make it deterministic?
+
+	// Question: When did the reloader copy and when did the reloader sent request to notify server via ReloadURL?
+	// 			Is the server got notified too soon before copying is finished?
+	// 			-> reloader applied and moved the files before reloader sends the request to mock server.
+
+	// Question: How to confirm the current status of outDir and outDir2?
 	testutil.Equals(t, "rule3-changed", string(data))
 
 	outEntries2, err := os.ReadDir(outDir2)
