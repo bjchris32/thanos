@@ -860,6 +860,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	// Sol1: make two actions in the test step 0 combined into just one reload request sent to mock server?
 	// Sol2: do not rely on `rel` to proceed the test step
 	// Sol3: modify the test steps into 3 steps
+	// Sol4: rollback the rel like the function `stepFunc` in `TestReloader_ConfigDirApply`
 
 	testutil.Equals(t, "rule3-changed", string(data))
 
