@@ -447,16 +447,16 @@ func (r *Reloader) apply(ctx context.Context) error {
 			}
 
 			if targetFile.IsDir() {
-				continue
+				continue // ignore the directory
 			}
 
 			if err := hashFile(h, path); err != nil {
 				return errors.Wrapf(err, "build hash for file: %s", path)
 			}
 
-			outFile := filepath.Join(outDir, targetFile.Name())
+			outFile := filepath.Join(outDir, targetFile.Name()) // not moved yet and it is just assigning the outFile name
 			cfgDirFiles[outFile] = struct{}{}
-			if err := r.normalize(path, outFile); err != nil {
+			if err := r.normalize(path, outFile); err != nil { // moving the path to outFile in the function `normalize`
 				return errors.Wrapf(err, "move file: %s", path)
 			}
 		}
@@ -527,7 +527,7 @@ func (r *Reloader) apply(ctx context.Context) error {
 			return nil
 		}
 
-		r.reloads.Inc()
+		r.reloads.Inc() // increase the reload count before triggering the reload actions
 		if err := r.triggerReload(ctx); err != nil {
 			r.reloadErrors.Inc()
 			r.lastReloadSuccess.Set(0)
