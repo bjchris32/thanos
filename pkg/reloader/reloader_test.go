@@ -856,7 +856,11 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	// 			Is the server got notified too soon before copying is finished?
 	// 			-> reloader applied and moved the files before reloader sends the request to mock server.
 
-	// Question: How to confirm the current status of outDir and outDir2?
+	// Possible solutions:
+	// Sol1: make two actions in the test step 0 combined into just one reload request sent to mock server?
+	// Sol2: do not rely on `rel` to proceed the test step
+	// Sol3: modify the test steps into 3 steps
+
 	testutil.Equals(t, "rule3-changed", string(data))
 
 	outEntries2, err := os.ReadDir(outDir2)
