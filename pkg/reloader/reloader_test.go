@@ -731,6 +731,8 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 				// ├─ rule3-001.yaml -> rule3-source.yaml
 				// └─ rule3-source.yaml
 				// └─ rule3.yaml -> dir2/rule3-001.yaml (*)
+
+			case 1:
 				testutil.Ok(t, os.Rename(path.Join(dir2, "rule3.yaml"), path.Join(dir, "rule3.yaml")))
 				// after moving the link from dir2 to dir:
 				// dir
@@ -753,7 +755,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 				// out2
 				// ├─ rule3-001.yaml
 				// └─ rule3-source.yaml
-			case 1:
+			case 2:
 				// Update the symlinked file but do not replace the symlink in dir.
 				//
 				// fsnotify shouldn't send any event because the change happens
@@ -780,7 +782,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 				// └─ rule3-source.yaml
 			}
 
-			if rel > 1 {
+			if rel > 2 {
 				// All good.
 				return
 			}
@@ -791,7 +793,7 @@ func TestReloader_ConfigDirApplyBasedOnWatchInterval(t *testing.T) {
 	g.Wait()
 
 	testutil.Ok(t, err)
-	testutil.Equals(t, 2, reloads.Load().(int))
+	testutil.Equals(t, 3, reloads.Load().(int))
 
 	outEntries, err := os.ReadDir(outDir)
 	testutil.Ok(t, err)
